@@ -1,68 +1,80 @@
+import argparse
 import re
 
-# Get bib and tex name
-bib_name = input('Enter bib file name: ')
-tex_name = input('Enter tex file name: ')
 
-if bib_name == '':
-    bib_name = 'references.bib'
-if tex_name == '':
-    tex_name = 'main.tex'
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description=
+        'Clean a .bib file by removing unused references from a .tex file.')
+    parser.add_argument('-b',
+                        '--bib',
+                        type=str,
+                        default='references.bib',
+                        help='Path to the .bib file (default: references.bib)')
+    parser.add_argument('-t',
+                        '--tex',
+                        type=str,
+                        default='main.tex',
+                        help='Path to the .tex file (default: main.tex)')
+    parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        default=None,
+        help=
+        'Output filename for cleaned .bib file (default: cleaned_<input>.bib)')
+    return parser.parse_args()
 
-# Load bib file from local directory
-with open(bib_name, 'r') as f:
-    bib = f.read()
 
-# Load tex file from local directory
-with open(tex_name, 'r') as f:
-    tex = f.read()
+def load_file(filename):
+    """Load the content of a file."""
+    with open(filename, 'r', encoding='utf-8') as f:
+        return f.read()
 
-test = "hallo what is up~\cite{{test}} everything cool man~\citeA{{test2}}? Ok now multiple reference ~\cite{{test3,test4 is a test}}. And an empty citation~\citeA{{}}. What will happen then?"
 
-# Delete emtpy citations from tex file
-tex = re.sub(r'\\citeA\{\}', '', tex)
-tex = re.sub(r'\\cite\{\}', '', tex)
+def extract_citations(tex_content):
+    """Extract citation keys from \\cite{} and \\citeA{} commands."""
+    tex_content = re.sub(r'\\citeA\{\}', '', tex_content)
+    tex_content = re.sub(r'\\cite\{\}', '', tex_content)
+    citations = re.findall(r'\\cite\{(.*?)\}', tex_content) + re.findall(
+        r'\\citeA\{(.*?)\}', tex_content)
 
-# Reg exp for matching \cite{...} and \citeA{...} including empty citations
-# citations = re.findall(r'\\cite\{(.+?)\}', test)
+    extracted_citations = set()
+    for citation in citations:
+        extracted_citations.update(map(str.strip, citation.split(',')))
 
-# Get all citations from tex file
-citations = [*re.findall(r'\\cite\{(.+?)\}', tex),*re.findall(r'\\citeA\{(.+?)\}', tex)]
+    return extracted_citations
 
-# Split citations that are separated by comma
-for citation in citations:
-    if ',' in citation:
-        citations.remove(citation)
-        citations.extend(citation.split(','))
 
-# Remove spaces from citations
-citations = [citation.strip() for citation in citations]
+def clean_bib_file(bib_content, citations):
+    """Remove unused references from the .bib file."""
+    cleaned_bib = []
+    delete_flag = True
+    for line in bib_content.splitlines():
+        if line.strip().startswith('@'):
+            citation_name = line.split('{', 1)[1].split(',', 1)[0].strip()
+            delete_flag = citation_name not in citations
+        if not delete_flag:
+            cleaned_bib.append(line)
 
-# Remove duplicates from citations
-citations = list(dict.fromkeys(citations))
+    return '\n'.join(cleaned_bib) + '\n'
 
-# Go through bib file line by line
-bib = bib.splitlines()
 
-# Check if line starts with @ and if it does, check if the citation is in the list of citations
-deleteFlag = True
-cleaned_bib = []
-for line in bib:
-    if line.startswith('@'):
-        citation_name = line.split('{')[1].split(',')[0]
-        if citation_name not in citations:
-            deleteFlag = True
-        else:
-            deleteFlag = False
-            # Remove entry from citations list
-            citations.remove(citation_name)
-    if not deleteFlag:
-        cleaned_bib.append(line + '\n')
+def main():
+    args = parse_arguments()
 
-# Join bib file again including line breaks
-cleaned_bib = ''.join(cleaned_bib)
-# print(bib)
+    bib_content = load_file(args.bib)
+    tex_content = load_file(args.tex)
 
-# Save cleaned bib file to local directory
-with open('cleaned_' + bib_name, 'w') as f:
-    f.write(cleaned_bib)
+    citations = extract_citations(tex_content)
+    cleaned_bib = clean_bib_file(bib_content, citations)
+
+    output_filename = args.output if args.output else f'cleaned_{args.bib}'
+    with open(output_filename, 'w', encoding='utf-8') as f:
+        f.write(cleaned_bib)
+
+    print(f'Cleaned .bib file saved as {output_filename}')
+
+
+if __name__ == '__main__':
+    main()
