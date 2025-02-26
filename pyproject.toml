@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "clean-bibtex"
+version = "0.1.0"
+description = "A tool to delete unused citations in bib file for Latex documents."
+readme = "README.md"
+requires-python = ">=3.6"
+license = { file = "LICENSE" }
+authors = [
+    { name = "David Algis", email = "david.algis@tutamail.com" }
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/davidAlgis/clean_bibtex"
+"Bug Tracker" = "https://github.com/davidAlgis/clean_bibtex/issues"
+
+[tool.setuptools]
+py-modules = []
