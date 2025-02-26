@@ -1,5 +1,6 @@
 import argparse
 import re
+import os
 
 
 def parse_arguments():
@@ -22,8 +23,23 @@ def parse_arguments():
         type=str,
         default=None,
         help=
-        'Output filename for cleaned .bib file (default: cleaned_<input>.bib)')
-    return parser.parse_args()
+        'Output filename for cleaned .bib file (default: overwrite input .bib file)'
+    )
+
+    args = parser.parse_args()
+
+    # Check file extensions
+    if not args.bib.endswith('.bib'):
+        print(
+            f"Warning ! The BibTeX file must have a '.bib' extension: {args.bib}"
+        )
+
+    if not args.tex.endswith('.tex'):
+        print(
+            f"Warning ! The LaTeX file must have a '.tex' extension: {args.tex}"
+        )
+
+    return args
 
 
 def load_file(filename):
@@ -69,7 +85,14 @@ def main():
     citations = extract_citations(tex_content)
     cleaned_bib = clean_bib_file(bib_content, citations)
 
-    output_filename = args.output if args.output else f'cleaned_{args.bib}'
+    # Determine the output filename
+    output_filename = args.output if args.output else args.bib
+
+    # Ensure the output directory exists
+    output_dir = os.path.dirname(output_filename)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
     with open(output_filename, 'w', encoding='utf-8') as f:
         f.write(cleaned_bib)
 
